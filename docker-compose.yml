@@ -54,12 +54,15 @@ services:
       - ./superset_config.py:/etc/superset/superset_config.py
 
   nginx:
-    build: ./nginx
+    image: nginx:latest
+    container_name: airflow_nginx
     ports:
       - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
     depends_on:
-      - superset
       - webserver
+      - superset
 
 volumes:
   redis:
