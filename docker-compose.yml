@@ -1,0 +1,65 @@
+# reference
+# - https://github.com/amancevice/docker-superset/blob/master/examples/postgres/docker-compose.yml
+
+version: '3'
+services:
+  redis:
+    image: redis
+    restart: always
+    volumes:
+      - redis:/data
+  postgres:
+    image: postgres:latest
+    container_name: airflow_psql
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+      # Fernet Key
+      # - FERNET_KEY=
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+
+  webserver:
+    build: ./airflow
+    container_name: airflow_webserver
+    restart: always
+    depends_on:
+        - postgres
+    environment:
+      - LOAD_EXAMPLES=n
+      - EXECUTOR=Local
+      # Fernet Key
+      # - AIRFLOW__CORE__FERNET_KEY=
+    volumes:
+      - ./airflow/dags:/usr/local/airflow/dags
+      - ./airflow/plugins:/usr/local/airflow/plugins
+      - ./airflow/requirements.txt:/requirements.txt
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+  
+  superset:
+    image: amancevice/superset:0.34.0
+    restart: always
+    depends_on:
+      - redis
+    ports:
+      - "8088"
+    volumes:
+      - ./superset_config.py:/etc/superset/superset_config.py
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - superset
+      - webserver
+
+volumes:
+  redis:
